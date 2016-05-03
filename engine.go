@@ -54,11 +54,11 @@ func OpenEngine(path string) *Engine {
 		size: int(info.Size()),
 	}
 	e.mmap = OpenMmap(fd, 0, e.size)
-	e.Next(0)
+	e.SetNext(0)
 	return e
 }
 
-func (e *Engine) Next(i int) {
+func (e *Engine) SetNext(i int) {
 	/*
 		j := i
 		for j < len(e.mmap) {
@@ -76,21 +76,21 @@ func (e *Engine) Next(i int) {
 			e.Next(j)
 		}
 	*/
-	for i < len(e.mmap) {
+	for i < len(e.mmap) && i < e.next {
 		if e.mmap[i] == 0x00 {
 			e.next = i
 			return
 		}
-		i += int(e.mmap[i])
+		i += int(e.mmap[i+1])
 		return
 	}
 }
 
-func (e *Engine) Put(d []byte, k int) {
+func (e *Engine) Set(d []byte, k int) {
 	// get byte offset from position k
 	of := k * PAGE
 	// get page aligned size of record
-	sz := (len(d) + 1 + PAGE - 1) &^ (PAGE - 1)
+	sz := (len(d) + 2 + PAGE - 1) &^ (PAGE - 1)
 	// do a bounds check, grow if nessicary...
 	if of+sz >= len(e.mmap) {
 		e.grow()
@@ -101,13 +101,40 @@ func (e *Engine) Put(d []byte, k int) {
 	// resize data according to nearest page offset
 	//d = append(d, make([]byte, (sz-len(d)))...)
 	// copy the data `one-off` the offset
-	copy(e.mmap[of+1:], append(d, make([]byte, (sz-len(d)))...))
+	copy(e.mmap[of+2:], append(d, make([]byte, (sz-len(d)))...))
 	// write the header to the offset
-	e.mmap[of] = byte(sz / PAGE)
+	e.mmap[of] = 0x01
+	e.mmap[of+1] = byte(sz / PAGE)
 	// check if we just added, or updated so we
 	// know if we should augment e.next's offset
 	if added {
-		e.Next(of + sz)
+		e.SetNext(of + sz)
+	}
+}
+
+func (e *Engine) Put(d []byte, k int) {
+	// get byte offset from position k
+	of := k * PAGE
+	// get page aligned size of record
+	sz := (len(d) + 2 + PAGE - 1) &^ (PAGE - 1)
+	// do a bounds check, grow if nessicary...
+	if of+sz >= len(e.mmap) {
+		e.grow()
+		//log.Fatalf("cannot put at offset %d, offset + record exceeds mapped reigon\n", of+sz)
+	}
+	// check status of record header
+	added := (e.mmap[of] == 0x00)
+	// resize data according to nearest page offset
+	//d = append(d, make([]byte, (sz-len(d)))...)
+	// copy the data `one-off` the offset
+	copy(e.mmap[of+2:], append(d, make([]byte, (sz-len(d)))...))
+	// write the header to the offset
+	e.mmap[of] = 0x01
+	e.mmap[of+1] = byte(sz / PAGE)
+	// check if we just added, or updated so we
+	// know if we should augment e.next's offset
+	if added {
+		e.SetNext(of + sz)
 	}
 }
 
@@ -115,29 +142,29 @@ func (e *Engine) Get(k int) []byte {
 	// get byte offset from position k
 	of := k * PAGE
 	// get number of pages from record header
-	sz := int(e.mmap[of])
+	sz := int(e.mmap[of+1])
 	// return a copy of the record slice at
 	// k's offset, up to number of used pages
 
 	//d := make([]byte, sz*PAGE)
-	//copy(d, e.mmap[of:of+sz*PAGE])
+	//copy(d, e.mmap[of:of+(sz*PAGE)])
 	//return d
-	return e.mmap[of : of+sz*PAGE]
+	return e.mmap[of : of+(sz*PAGE)]
 }
 
 func (e *Engine) Del(k int) {
 	// get byte offset from position k
 	of := k * PAGE
 	// get number of pages from record header
-	sz := int(e.mmap[of])
+	sz := int(e.mmap[of+1])
 	// copy number of pages * page size worth
 	// of nil bytes starting at the k's offset
 	copy(e.mmap[of:], make([]byte, sz*PAGE))
 	// check to see if the offset we just
 	// delted from is earlier in the array
 	// and if it is, then reset next to k
-	if k < e.next {
-		e.next = k
+	if of < e.next {
+		e.next = of
 	}
 }
 
@@ -158,7 +185,6 @@ func (e *Engine) grow() {
 	}
 	// remap underlying file now that it has grown
 	e.mmap = OpenMmap(e.file, 0, e.size)
-	log.Println("FILE WAS GROWN SUCCESSFULLY")
 }
 
 func (e *Engine) CloseEngine() {
