@@ -1,7 +1,6 @@
 package db
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -22,7 +21,6 @@ func OpenEngine(path string) *Engine {
 	// if engine is new, enter if statement
 	_, err := os.Stat(path + `.dat`)
 	if err != nil && !os.IsExist(err) {
-		fmt.Println("CREATING FOR THE FIRST TIME...")
 		// create directory path
 		dirs, _ := filepath.Split(path)
 		err := os.MkdirAll(dirs, 0755)
