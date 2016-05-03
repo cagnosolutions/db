@@ -59,20 +59,30 @@ func OpenEngine(path string) *Engine {
 }
 
 func (e *Engine) Next(i int) {
-	j := i
-	for j < len(e.mmap) {
-		if e.mmap[j] == 0x00 {
-			e.next = j
+	/*
+		j := i
+		for j < len(e.mmap) {
+			if e.mmap[j] == 0x00 {
+				e.next = j
+				return
+			}
+			j += int(e.mmap[j])
 			return
 		}
-		j += int(e.mmap[j])
+		if i == 0 {
+			// grow file and remap because we
+			// have no more empty slots left
+			e.grow()
+			e.Next(j)
+		}
+	*/
+	for i < len(e.mmap) {
+		if e.mmap[i] == 0x00 {
+			e.next = i
+			return
+		}
+		i += int(e.mmap[i])
 		return
-	}
-	if i == 0 {
-		// grow file and remap because we
-		// have no more empty slots left
-		e.grow()
-		e.Next(j)
 	}
 }
 
@@ -81,9 +91,10 @@ func (e *Engine) Put(d []byte, k int) {
 	of := k * PAGE
 	// get page aligned size of record
 	sz := (len(d) + 1 + PAGE - 1) &^ (PAGE - 1)
-	// do a bounds check
+	// do a bounds check, grow if nessicary...
 	if of+sz >= len(e.mmap) {
-		log.Fatalf("cannot put at offset %d, offset + record exceeds mapped reigon\n", of+sz)
+		e.grow()
+		//log.Fatalf("cannot put at offset %d, offset + record exceeds mapped reigon\n", of+sz)
 	}
 	// check status of record header
 	added := (e.mmap[of] == 0x00)
