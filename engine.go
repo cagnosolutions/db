@@ -90,9 +90,9 @@ func (e *Engine) Put(d []byte, k int) {
 	// check status of record header
 	added := (e.mmap[of] == 0x00)
 	// resize data according to nearest page offset
-	d = append(d, make([]byte, (sz-len(d)))...)
+	//d = append(d, make([]byte, (sz-len(d)))...)
 	// copy the data `one-off` the offset
-	copy(e.mmap[of+1:], d)
+	copy(e.mmap[of+1:], append(d, make([]byte, (sz-len(d)))...))
 	// write the header to the offset
 	e.mmap[of] = byte(sz / PAGE)
 	// check if we just added, or updated so we
@@ -109,9 +109,11 @@ func (e *Engine) Get(k int) []byte {
 	sz := int(e.mmap[of])
 	// return a copy of the record slice at
 	// k's offset, up to number of used pages
-	d := make([]byte, sz*PAGE)
-	copy(d, e.mmap[of:of+sz*PAGE])
-	return d
+
+	//d := make([]byte, sz*PAGE)
+	//copy(d, e.mmap[of:of+sz*PAGE])
+	//return d
+	return e.mmap[of : of+sz*PAGE]
 }
 
 func (e *Engine) Del(k int) {
