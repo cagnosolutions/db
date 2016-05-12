@@ -59,23 +59,6 @@ func OpenEngine(path string) *Engine {
 }
 
 func (e *Engine) SetNext(i int) {
-	/*
-		j := i
-		for j < len(e.mmap) {
-			if e.mmap[j] == 0x00 {
-				e.next = j
-				return
-			}
-			j += int(e.mmap[j])
-			return
-		}
-		if i == 0 {
-			// grow file and remap because we
-			// have no more empty slots left
-			e.grow()
-			e.Next(j)
-		}
-	*/
 	for i < len(e.mmap) && i < e.next {
 		if e.mmap[i] == 0x00 {
 			e.next = i

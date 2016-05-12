@@ -41,7 +41,7 @@ func Benchmark_Engine_Del(b *testing.B) {
 func Benchmark_Engine_Grow(b *testing.B) {
 	e := db.OpenEngine(`db/test`)
 	b.ResetTimer()
-	for i := 0; i < 4096*8; i++ {
+	for i := 0; i < 4096*40; i++ {
 		e.Put([]byte{'f', 'o', 'o', 'b', 'a', 'r', 'b', 'a', 'z', '!'}, i)
 	}
 	b.StopTimer()
