@@ -1,57 +1,60 @@
 package db
 
 import (
+	"bytes"
 	"os"
 	"strings"
 	"syscall"
 	"unsafe"
 )
 
-type Data []byte
+type Mmap []byte
 
-func Mmap(f *os.File, off, len int) Data {
-	data, err := syscall.Mmap(int(f.Fd()), int64(off), len, syscall.PROT_READ|syscall.PROT_WRITE, syscall.MAP_SHARED)
+var tmp = make([]byte, PAGE)
+
+func OpenMmap(f *os.File, off, len int) Mmap {
+	mmap, err := syscall.Mmap(int(f.Fd()), int64(off), len, syscall.PROT_READ|syscall.PROT_WRITE, syscall.MAP_SHARED)
 	if err != nil {
 		panic(err)
 	}
-	return data
+	return mmap
 }
 
-func (d Data) Mlock() {
-	err := syscall.Mlock(d)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func (d Data) Munlock() {
-	err := syscall.Munlock(d)
+func (m Mmap) Mlock() {
+	err := syscall.Mlock(m)
 	if err != nil {
 		panic(err)
 	}
 }
 
-func (d Data) Munmap() {
-	err := syscall.Munmap(d)
-	d = nil
+func (m Mmap) Munlock() {
+	err := syscall.Munlock(m)
 	if err != nil {
 		panic(err)
 	}
 }
 
-func (d Data) Sync() {
+func (m Mmap) Munmap() {
+	err := syscall.Munmap(m)
+	m = nil
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (m Mmap) Sync() {
 	_, _, err := syscall.Syscall(syscall.SYS_MSYNC,
-		uintptr(unsafe.Pointer(&d[0])), uintptr(len(d)),
+		uintptr(unsafe.Pointer(&m[0])), uintptr(len(m)),
 		uintptr(syscall.MS_ASYNC))
 	if err != 0 {
 		panic(err)
 	}
 }
 
-func (d Data) Mremap(size int) Data {
-	fd := uintptr(unsafe.Pointer(&d[0]))
-	err := syscall.Munmap(d)
-	d = nil
+func (m Mmap) Mremap(size int) Mmap {
+	fd := uintptr(unsafe.Pointer(&m[0]))
+	err := syscall.Munmap(m)
+	m = nil
 	if err != nil {
 		panic(err)
 	}
@@ -59,11 +62,11 @@ func (d Data) Mremap(size int) Data {
 	if err != nil {
 		panic(err)
 	}
-	d, err = syscall.Mmap(int(fd), int64(0), size, syscall.PROT_READ|syscall.PROT_WRITE, syscall.MAP_SHARED)
+	m, err = syscall.Mmap(int(fd), int64(0), size, syscall.PROT_READ|syscall.PROT_WRITE, syscall.MAP_SHARED)
 	if err != nil {
 		panic(err)
 	}
-	return d
+	return m
 }
 
 // open file helper
@@ -92,9 +95,9 @@ func sanitize(path string) string {
 // round up to nearest pagesize -- helper
 func align(size int) int {
 	if size > 0 {
-		return (size + SYS_PAGE - 1) &^ (SYS_PAGE - 1)
+		return (size + PAGE - 1) &^ (PAGE - 1)
 	}
-	return SYS_PAGE
+	return PAGE
 }
 
 // resize underlying file -- helper
@@ -104,4 +107,33 @@ func resize(fd uintptr, size int) int {
 		panic(err)
 	}
 	return size
+}
+
+func (mm Mmap) Len() int {
+	return len(mm) / PAGE
+}
+
+func (mm Mmap) Less(i, j int) bool {
+	pi, pj := i*PAGE, j*PAGE
+
+	if mm[pi] == 0x00 {
+		if mm[pi] == mm[pj] {
+			return true
+		}
+		return false
+	}
+	if mm[pj] == 0x00 {
+		return true
+	}
+
+	return bytes.Compare(mm[pi:pi+PAGE], mm[pj:pj+PAGE]) == -1
+
+}
+
+func (mm Mmap) Swap(i, j int) {
+	pi, pj := i*PAGE, j*PAGE
+
+	copy(tmp, mm[pi:pi+PAGE])
+	copy(mm[pi:pi+PAGE], mm[pj:pj+PAGE])
+	copy(mm[pj:pj+PAGE], tmp)
 }
