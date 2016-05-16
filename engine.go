@@ -134,10 +134,7 @@ func (e *Engine) Put(d []byte, k int) {
 			of = i * PAGE
 		}
 	}
-
-	// resize data according to nearest page offset
-	//d = append(d, make([]byte, (sz-len(d)))...)
-	// copy the data `one-off` the offset
+	// resize data according to nearest page offset, and copy the data
 	copy(e.mmap[of+2:], append(d, make([]byte, (sz-len(d)))...))
 	// write the header to the offset
 	e.mmap[of] = 0x01
