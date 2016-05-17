@@ -1,6 +1,7 @@
 package db
 
 import (
+	"encoding/binary"
 	"fmt"
 	"log"
 	"os"
@@ -14,11 +15,12 @@ const PAGE = 4096
 var WIPE = make([]byte, PAGE)
 
 type Engine struct {
-	file  *os.File
-	size  int
-	mmap  Mmap
-	count int // number of records
-	next  int
+	file *os.File
+	size int
+	mmap Mmap
+	indx *Tree
+	recs int // number of records
+	next int
 }
 
 func (e Engine) PrintMMap() {
@@ -65,8 +67,15 @@ func OpenEngine(path string) *Engine {
 		file: fd,
 		size: int(info.Size()),
 	}
+	// map file into virtual address space, and sort
 	e.mmap = OpenMmap(fd, 0, e.size)
-	e.SetNext(0)
+	e.SortMmap()
+	// initialize engine's primary index
+	e.indx = NewTree()
+	buf := make([]byte, 10)
+	for i := 0; i < len(e.mmap); i += PAGE {
+		e.indx.Add(e.mmap.Key(i), binary.BigEndian.PutUint64(&buf, int64(i)))
+	}
 	return e
 }
 
