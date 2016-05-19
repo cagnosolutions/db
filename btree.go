@@ -745,6 +745,9 @@ func redistributeNodes(root, n, neighbor *node, neighborIndex, primeIndex int, p
 }
 
 func destroyTreeNodes(n *node) {
+	if n == nil {
+		return
+	}
 	if n.isLeaf {
 		for i := 0; i < n.numKeys; i++ {
 			n.ptrs[i] = nil

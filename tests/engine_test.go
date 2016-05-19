@@ -7,7 +7,7 @@ import (
 )
 
 func Benchmark_Engine_Put(b *testing.B) {
-	e := db.OpenEngine(`db/test`)
+	e := db.OpenEngine(`_db/test`)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		e.Put([]byte{'f', 'o', 'o', 'b', 'a', 'r', 'b', 'a', 'z', '!'}, 0)
