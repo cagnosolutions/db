@@ -3,58 +3,60 @@ package db
 import (
 	"bytes"
 	"os"
-	"strings"
 	"syscall"
 	"unsafe"
 )
 
-type Mmap []byte
+var (
+	page = os.Getpagesize()
+	temp = make([]byte, page)
+)
 
-var tmp = make([]byte, PAGE)
+type mmap []byte
 
-func OpenMmap(f *os.File, off, len int) Mmap {
-	mmap, err := syscall.Mmap(int(f.Fd()), int64(off), len, syscall.PROT_READ|syscall.PROT_WRITE, syscall.MAP_SHARED)
+func Mmap(f *os.File, off, len int) mmap {
+	mm, err := syscall.Mmap(int(f.Fd()), int64(off), len, syscall.PROT_READ|syscall.PROT_WRITE, syscall.MAP_SHARED)
 	if err != nil {
 		panic(err)
 	}
-	return mmap
+	return mm
 }
 
-func (m Mmap) Mlock() {
-	err := syscall.Mlock(m)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func (m Mmap) Munlock() {
-	err := syscall.Munlock(m)
+func (mm mmap) Mlock() {
+	err := syscall.Mlock(mm)
 	if err != nil {
 		panic(err)
 	}
 }
 
-func (m Mmap) Munmap() {
-	err := syscall.Munmap(m)
-	m = nil
+func (mm mmap) Munlock() {
+	err := syscall.Munlock(mm)
 	if err != nil {
 		panic(err)
 	}
 }
 
-func (m Mmap) Sync() {
+func (mm mmap) Munmap() {
+	err := syscall.Munmap(mm)
+	mm = nil
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (mm mmap) Sync() {
 	_, _, err := syscall.Syscall(syscall.SYS_MSYNC,
-		uintptr(unsafe.Pointer(&m[0])), uintptr(len(m)),
+		uintptr(unsafe.Pointer(&mm[0])), uintptr(len(mm)),
 		uintptr(syscall.MS_ASYNC))
 	if err != 0 {
 		panic(err)
 	}
 }
 
-func (m Mmap) Mremap(size int) Mmap {
-	fd := uintptr(unsafe.Pointer(&m[0]))
-	err := syscall.Munmap(m)
-	m = nil
+func (mm mmap) Mremap(size int) mmap {
+	fd := uintptr(unsafe.Pointer(&mm[0]))
+	err := syscall.Munmap(mm)
+	mm = nil
 	if err != nil {
 		panic(err)
 	}
@@ -62,15 +64,15 @@ func (m Mmap) Mremap(size int) Mmap {
 	if err != nil {
 		panic(err)
 	}
-	m, err = syscall.Mmap(int(fd), int64(0), size, syscall.PROT_READ|syscall.PROT_WRITE, syscall.MAP_SHARED)
+	mm, err = syscall.Mmap(int(fd), int64(0), size, syscall.PROT_READ|syscall.PROT_WRITE, syscall.MAP_SHARED)
 	if err != nil {
 		panic(err)
 	}
-	return m
+	return mm
 }
 
-// open file helper
-func OpenFile(path string) (*os.File, string, int) {
+/*
+func Open(path string) (*os.File, string, int) {
 	fd, err := os.OpenFile(path, syscall.O_RDWR|syscall.O_CREAT|syscall.O_APPEND, 0644)
 	if err != nil {
 		panic(err)
@@ -91,8 +93,8 @@ func sanitize(path string) string {
 	}
 	return path
 }
+*/
 
-// round up to nearest pagesize -- helper
 func align(size int) int {
 	if size > 0 {
 		return (size + PAGE - 1) &^ (PAGE - 1)
@@ -100,7 +102,6 @@ func align(size int) int {
 	return PAGE
 }
 
-// resize underlying file -- helper
 func resize(fd uintptr, size int) int {
 	err := syscall.Ftruncate(int(fd), int64(align(size)))
 	if err != nil {
@@ -109,13 +110,12 @@ func resize(fd uintptr, size int) int {
 	return size
 }
 
-func (mm Mmap) Len() int {
-	return len(mm) / PAGE
+func (mm mmap) Len() int {
+	return len(mm) / page
 }
 
-func (mm Mmap) Less(i, j int) bool {
-	pi, pj := i*PAGE, j*PAGE
-
+func (mm mmap) Less(i, j int) bool {
+	pi, pj := i*page, j*page
 	if mm[pi] == 0x00 {
 		if mm[pi] == mm[pj] {
 			return true
@@ -125,15 +125,13 @@ func (mm Mmap) Less(i, j int) bool {
 	if mm[pj] == 0x00 {
 		return true
 	}
-
-	return bytes.Compare(mm[pi:pi+PAGE], mm[pj:pj+PAGE]) == -1
+	return bytes.Compare(mm[pi:pi+page], mm[pj:pj+page]) == -1
 
 }
 
-func (mm Mmap) Swap(i, j int) {
-	pi, pj := i*PAGE, j*PAGE
-
-	copy(tmp, mm[pi:pi+PAGE])
-	copy(mm[pi:pi+PAGE], mm[pj:pj+PAGE])
-	copy(mm[pj:pj+PAGE], tmp)
+func (mm mmap) Swap(i, j int) {
+	pi, pj := i*page, j*page
+	copy(temp, mm[pi:pi+page])
+	copy(mm[pi:pi+page], mm[pj:pj+page])
+	copy(mm[pj:pj+page], temp)
 }
