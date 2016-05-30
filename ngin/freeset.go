@@ -1,4 +1,4 @@
-package db
+package ngin
 
 type freeset map[int]bool
 

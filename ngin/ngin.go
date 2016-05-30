@@ -1,4 +1,4 @@
-package db
+package ngin
 
 import (
 	"os"
@@ -11,7 +11,7 @@ const (
 
 type ngin struct {
 	file *os.File
-	indx *btree
+	indx *tree
 	data mmap
 	free freeset
 	curs int
@@ -46,7 +46,7 @@ func OpenNgin(path string) *ngin {
 	if err != nil {
 		panic(err)
 	}
-	e := &Engine{
+	e := &ngin{
 		file: fd,
 		data: Mmap(fd, 0, int(info.Size())),
 	}

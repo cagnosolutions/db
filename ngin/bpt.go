@@ -1,4 +1,4 @@
-package db
+package ngin
 
 import (
 	"bytes"
@@ -692,7 +692,7 @@ func (t *tree) All() [][]byte {
 				// get record from leaf
 				rec := leaf.ptrs[i].(*record)
 				// get doc and append to docs
-				vals = append(vals, rec.Val)
+				vals = append(vals, rec.val)
 			}
 		}
 		// we're at the end, no more leaves to iterate
