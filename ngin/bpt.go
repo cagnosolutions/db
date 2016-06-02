@@ -4,15 +4,32 @@ import (
 	"bytes"
 	"fmt"
 	"strings"
+	"unsafe"
 )
 
-const ORDER = 32
+const ORDER = 32 // 56
+
+func NodeToPtr(n *node) unsafe.Pointer {
+	return unsafe.Pointer(&n)
+}
+
+func RecordToPtr(r *record) unsafe.Pointer {
+	return unsafe.Pointer(&r)
+}
+
+func PtrToNode(ptr unsafe.Pointer) *node {
+	return (*node)(unsafe.Pointer(ptr))
+}
+
+func PtrToRecord(ptr unsafe.Pointer) *record {
+	return (*record)(unsafe.Pointer(ptr))
+}
 
 // node represents a tree's node
 type node struct {
 	numKeys int
-	keys    [ORDER - 1][]byte
-	ptrs    [ORDER]interface{}
+	keys    [ORDER - 1][]byte  // fixed 64 buyte keys
+	ptrs    [ORDER]interface{} // replace with unsafe.Pointer
 	parent  *node
 	isLeaf  bool
 	next    *node
