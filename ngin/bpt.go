@@ -7,6 +7,17 @@ import (
 	"unsafe"
 )
 
+/*
+	3984 size of...
+	struct {
+		numKeys int
+		keys    [55][64]byte
+		ptrs    [56]*[]byte
+		parent  *int
+		isLeaf  struct{}
+	}
+*/
+
 const ORDER = 32 // 56
 
 func NodeToPtr(n *node) unsafe.Pointer {
