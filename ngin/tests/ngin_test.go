@@ -3,11 +3,11 @@ package main
 import (
 	"testing"
 
-	"github.com/cagnosolutions/db"
+	"github.com/cagnosolutions/db/ngin"
 )
 
 func Benchmark_Ngin_Put(b *testing.B) {
-	e := db.OpenNgin(`_db/test`)
+	e := ngin.OpenNgin(`_db/test`)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		e.Put([]byte{'f', 'o', 'o', 'b', 'a', 'r', 'b', 'a', 'z', '!'}, 0)
@@ -17,7 +17,7 @@ func Benchmark_Ngin_Put(b *testing.B) {
 }
 
 func Benchmark_Ngin_Get(b *testing.B) {
-	e := db.OpenNgin(`db/test`)
+	e := ngin.OpenNgin(`db/test`)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		if d := e.Get(0); d == nil {
@@ -29,7 +29,7 @@ func Benchmark_Ngin_Get(b *testing.B) {
 }
 
 func Benchmark_Ngin_Del(b *testing.B) {
-	e := db.OpenNgin(`db/test`)
+	e := ngin.OpenNgin(`db/test`)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		e.Del(0)
@@ -39,7 +39,7 @@ func Benchmark_Ngin_Del(b *testing.B) {
 }
 
 func Benchmark_Ngin_Grow(b *testing.B) {
-	e := db.OpenNgin(`db/test`)
+	e := ngin.OpenNgin(`db/test`)
 	b.ResetTimer()
 	for i := 0; i < 4096*40; i++ {
 		e.Put([]byte{'f', 'o', 'o', 'b', 'a', 'r', 'b', 'a', 'z', '!'}, i)

@@ -31,7 +31,7 @@ func asRecord(p ptr_t) *record {
 	return (*record)(unsafe.Pointer(p))
 }
 
-// node represents a tree's node
+// node represents a btree's node
 type node struct {
 	numk   int
 	keys   [M - 1]key_t
@@ -60,36 +60,36 @@ type record struct {
 	val val_t
 }
 
-// tree represents the main b+tree
-type tree struct {
+// btree represents the main b+btree
+type btree struct {
 	root *node
 }
 
 // Has returns a boolean indicating weather or not the
 // provided key and associated record / value exists.
-func (t *tree) Has(key key_t) bool {
+func (t *btree) Has(key key_t) bool {
 	return t.find(key) != nil
 }
 
 // Add inserts a new record using provided key.
 // It only inserts if the key does not already exist.
-func (t *tree) Add(key key_t, val val_t) {
+func (t *btree) Add(key key_t, val val_t) {
 	// create record ptr for given value
 	ptr := &record{key, val}
 
-	// if the tree is empty
+	// if the btree is empty
 	if t.root == nil {
-		t.root = startNewtree(key, ptr)
+		t.root = startNewbtree(key, ptr)
 		return
 	}
-	// tree already exists, lets see what we
+	// btree already exists, lets see what we
 	// get when we try to find the correct leaf
 	leaf := findLeaf(t.root, key)
 	// ensure the leaf does not contain the key
 	if leaf.hasKey(key) > -1 {
 		return
 	}
-	// tree already exists, and ready to insert into
+	// btree already exists, and ready to insert into
 	if leaf.numk < M-1 {
 		insertIntoLeaf(leaf, ptr.key, ptr)
 		return
@@ -100,17 +100,17 @@ func (t *tree) Add(key key_t, val val_t) {
 
 // Set is mainly used for re-indexing
 // as it assumes the data to already
-// be contained the tree/index. it will
+// be contained the btree/index. it will
 // overwrite duplicate keys, as it does
 // not check to see if the key exists...
-func (t *tree) Set(key key_t, val val_t) {
-	// if the tree is empty, start a new one
+func (t *btree) Set(key key_t, val val_t) {
+	// if the btree is empty, start a new one
 	if t.root == nil {
-		t.root = startNewtree(key, &record{key, val})
+		t.root = startNewbtree(key, &record{key, val})
 		return
 	}
 
-	// tree already exists, lets see what we
+	// btree already exists, lets see what we
 	// get when we try to find the correct leaf
 	leaf := findLeaf(t.root, key)
 	// ensure the leaf does not contain the key
@@ -134,8 +134,8 @@ func (t *tree) Set(key key_t, val val_t) {
  *	inserting internals
  */
 
-// first insertion, start a new tree
-func startNewtree(key key_t, ptr *record) *node {
+// first insertion, start a new btree
+func startNewbtree(key key_t, ptr *record) *node {
 	root := &node{leaf: struct{}{}}
 	root.keys[0] = key
 	root.ptrs[0] = ptr_t(&ptr)
@@ -145,7 +145,7 @@ func startNewtree(key key_t, ptr *record) *node {
 	return root
 }
 
-// creates a new root for two sub-trees and inserts the key into the new root
+// creates a new root for two sub-btrees and inserts the key into the new root
 func insertIntoNewRoot(left *node, key key_t, right *node) *node {
 	root := &node{}
 	root.keys[0] = key
@@ -158,7 +158,7 @@ func insertIntoNewRoot(left *node, key key_t, right *node) *node {
 	return root
 }
 
-// insert a new node (leaf or internal) into tree, return root of tree
+// insert a new node (leaf or internal) into btree, return root of btree
 func insertIntoParent(root, left *node, key key_t, right *node) *node {
 	if left.parent == nil {
 		return insertIntoNewRoot(left, key, right)
@@ -338,7 +338,7 @@ func insertIntoLeafAfterSplitting(root, leaf *node, key key_t, ptr *record) *nod
 
 // Get returns the record for
 // a given key if it exists
-func (t *tree) Get(key key_t) val_t {
+func (t *btree) Get(key key_t) val_t {
 	n := findLeaf(t.root, key)
 	if n == nil {
 		return val_z
@@ -355,7 +355,7 @@ func (t *tree) Get(key key_t) val_t {
 	return asRecord(n.ptrs[i]).val
 }
 
-func (t *tree) find(key key_t) ptr_t {
+func (t *btree) find(key key_t) ptr_t {
 	n := findLeaf(t.root, key)
 	if n == nil {
 		return nil
@@ -411,7 +411,7 @@ func search(n *node, key key_t) int {
 }
 
 // breadth-first-search algorithm, kind of
-func (t *tree) BFS() {
+func (t *btree) BFS() {
 	if t.root == nil {
 		return
 	}
@@ -437,7 +437,7 @@ func (t *tree) BFS() {
 	fmt.Printf(`]\n`)
 }
 
-// finds the first leaf in the tree (lexicographically)
+// finds the first leaf in the btree (lexicographically)
 func findFirstLeaf(root *node) *node {
 	if root == nil {
 		return root
@@ -450,11 +450,11 @@ func findFirstLeaf(root *node) *node {
 }
 
 // Del deletes a record by key
-func (t *tree) Del(key key_t) {
+func (t *btree) Del(key key_t) {
 	ptrt := t.find(key)
 	leaf := findLeaf(t.root, key)
 	if ptrt != nil && leaf != nil {
-		// remove from tree, and rebalance
+		// remove from btree, and rebalance
 		t.root = deleteEntry(t.root, leaf, key, ptrt)
 	}
 }
@@ -514,7 +514,7 @@ func removeEntryFromNode(n *node, key key_t, ptr ptr_t) *node {
 	return n
 }
 
-// deletes an entry from the tree; removes record, key, and ptr from leaf and rebalances tree
+// deletes an entry from the btree; removes record, key, and ptr from leaf and rebalances btree
 func deleteEntry(root, n *node, key key_t, ptr ptr_t) *node {
 	var primeIndex, capacity int
 	var neighbor *node
@@ -576,7 +576,7 @@ func adjustRoot(root *node) *node {
 	// if root is empty and has a child
 	// promote first (only) child as the
 	// new root node. If it's a leaf then
-	// the while tree is empty...
+	// the while btree is empty...
 	if !root.isLeaf() {
 		newRoot = asNode(root.ptrs[0])
 		newRoot.parent = nil
@@ -692,7 +692,7 @@ func redistributeNodes(root, n, neighbor *node, neighborIndex, primeIndex int, p
 	return root
 }
 
-func destroytreeNodes(n *node) {
+func destroybtreeNodes(n *node) {
 	if n == nil {
 		return
 	}
@@ -702,14 +702,14 @@ func destroytreeNodes(n *node) {
 		}
 	} else {
 		for i := 0; i < n.numk+1; i++ {
-			destroytreeNodes(asNode(n.ptrs[i]))
+			destroybtreeNodes(asNode(n.ptrs[i]))
 		}
 	}
 	n = nil // free
 }
 
-// All returns all of the values in the tree (lexicographically)
-func (t *tree) All() []val_t {
+// All returns all of the values in the btree (lexicographically)
+func (t *btree) All() []val_t {
 	leaf := findFirstLeaf(t.root)
 	if leaf == nil {
 		return nil
@@ -734,8 +734,8 @@ func (t *tree) All() []val_t {
 	return vals
 }
 
-// Count returns the number of records in the tree
-func (t *tree) Count() int {
+// Count returns the number of records in the btree
+func (t *btree) Count() int {
 	if t.root == nil {
 		return -1
 	}
@@ -755,9 +755,9 @@ func (t *tree) Count() int {
 	return size
 }
 
-// Close destroys all the nodes of the tree
-func (t *tree) Close() {
-	destroytreeNodes(t.root)
+// Close destroys all the nodes of the btree
+func (t *btree) Close() {
+	destroybtreeNodes(t.root)
 }
 
 // cut will return the proper
@@ -807,65 +807,41 @@ func pathToRoot(root, child *node) int {
 	return length
 }
 
-func (t *tree) String() string {
+func (t *btree) String() string {
 	var i, rank, newRank int
 	if t.root == nil {
 		return "[]"
 	}
 	queue = nil
-	var tree string
+	var btree string
 	enQueue(t.root)
-	tree = "[["
+	btree = "[["
 	for queue != nil {
 		n := deQueue()
 		if n.parent != nil && n == asNode(n.parent.ptrs[0]) {
 			newRank = pathToRoot(t.root, n)
 			if newRank != rank {
 				rank = newRank
-				f := strings.LastIndex(tree, ",")
-				tree = tree[:f] + tree[f+1:]
-				tree += "],["
+				f := strings.LastIndex(btree, ",")
+				btree = btree[:f] + btree[f+1:]
+				btree += "],["
 			}
 		}
-		tree += "["
+		btree += "["
 		var keys []string
 		for i = 0; i < n.numk; i++ {
 			keys = append(keys, fmt.Sprintf("%q", n.keys[i]))
 		}
-		tree += strings.Join(keys, ",")
+		btree += strings.Join(keys, ",")
 		if !n.isLeaf() {
 			for i = 0; i <= n.numk; i++ {
 				enQueue(asNode(n.ptrs[i]))
 			}
 		}
-		tree += "],"
+		btree += "],"
 	}
-	f := strings.LastIndex(tree, ",")
-	tree = tree[:f] + tree[f+1:]
-	tree += "]]"
-	return tree
-}
-
-func Btoi(b []byte) int64 {
-	return int64(b[7]) |
-		int64(b[6])<<8 |
-		int64(b[5])<<16 |
-		int64(b[4])<<24 |
-		int64(b[3])<<32 |
-		int64(b[2])<<40 |
-		int64(b[1])<<48 |
-		int64(b[0])<<56
-}
-
-func Itob(i int64) []byte {
-	return []byte{
-		byte(i >> 56),
-		byte(i >> 48),
-		byte(i >> 40),
-		byte(i >> 32),
-		byte(i >> 24),
-		byte(i >> 16),
-		byte(i >> 8),
-		byte(i),
-	}
+	f := strings.LastIndex(btree, ",")
+	btree = btree[:f] + btree[f+1:]
+	btree += "]]"
+	return btree
 }

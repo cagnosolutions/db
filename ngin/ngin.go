@@ -1,20 +1,23 @@
 package ngin
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
+	"syscall"
 )
 
 const (
-	db_size = (1 << 26) // 64MB
+	slab = (1 << 26) //   64 MB Slab Size
+	page = (1 << 10) // 4096 KB Page Size
 )
+
+var empty = make([]byte, page)
 
 type ngin struct {
 	file *os.File
-	indx *tree
+	indx *btree
 	data mmap
-	free freeset
-	curs int
 }
 
 func OpenNgin(path string) *ngin {
@@ -30,7 +33,7 @@ func OpenNgin(path string) *ngin {
 		if err != nil {
 			panic(err)
 		}
-		if err := fd.Truncate(db_size); err != nil {
+		if err := fd.Truncate(page + slab); err != nil {
 			panic(err)
 		}
 		if err := fd.Close(); err != nil {
@@ -46,9 +49,40 @@ func OpenNgin(path string) *ngin {
 	if err != nil {
 		panic(err)
 	}
-	e := &ngin{
+	return &ngin{
 		file: fd,
 		data: Mmap(fd, 0, int(info.Size())),
 	}
-	return e
+}
+
+func (n *ngin) set(d []byte, k int) {
+	o := k * page
+	if o+page >= len(e.data) {
+		e.grow()
+	}
+	copy(n.data[o:], append(d, make([]byte, (page-len(d)))...))
+}
+
+func (n *ngin) get(k int) []byte {
+	o := k * page
+	if e.data[o] != 0x00 {
+		if n := bytes.IndexByte(n.data[o:o+page], byte(0x00)); n > -1 {
+			return n.data[o : o+n]
+		}
+	}
+	return nil
+}
+
+func (n *ngin) del(k int) {
+	o := k * page
+	copy(e.data[o:], empty)
+}
+
+func (n *ngin) grow() {
+	size := ((len(n.data) + (page + slab)) + page - 1) &^ (page - 1)
+	n.data.Munmap()
+	if err := syscall.Ftruncate(int(e.file.Fd()), int64(size)); err != nil {
+		panic(err)
+	}
+	n.data = Mmap(n.file, 0, size)
 }
