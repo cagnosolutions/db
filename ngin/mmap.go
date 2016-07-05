@@ -7,11 +7,6 @@ import (
 	"unsafe"
 )
 
-var (
-	page = os.Getpagesize()
-	temp = make([]byte, page)
-)
-
 type mmap []byte
 
 func Mmap(f *os.File, off, len int) mmap {

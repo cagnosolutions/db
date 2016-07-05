@@ -49,7 +49,6 @@ func OpenEngine(path string) *Engine {
 	if err != nil {
 		panic(err)
 	}
-	B
 
 	// map file into virtual address space, and sort
 	e := &Engine{
