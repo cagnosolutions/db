@@ -7,15 +7,24 @@ import (
 	"syscall"
 )
 
+// slab constants
 const (
-	slab = (1 << 24)
-	//slab = (1 << 26) //   64 MB Slab Size
-	page = (1 << 12) //		4KB Page Size
+	slab_16m = (1 << 24)
+	slab_32m = (1 << 25)
+	slab_64m = (1 << 26)
 )
 
+// page constants
+const (
+	page_4k = (1 << 12)
+	page_8k = (1 << 13)
+)
+
+// globals
 var (
-	temp  = make([]byte, page)
-	empty = temp
+	slab = slab_64m
+	page = page_4k
+	temp = make([]byte, page)
 )
 
 type engine struct {
@@ -38,7 +47,7 @@ func OpenEngine(path string) *engine {
 		if err != nil {
 			panic(err)
 		}
-		if err := fd.Truncate(slab); err != nil {
+		if err := fd.Truncate(int64(slab)); err != nil {
 			panic(err)
 		}
 		if err := fd.Close(); err != nil {
