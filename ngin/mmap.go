@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"os"
 	"syscall"
-	"unsafe"
 )
 
 type mmap []byte
