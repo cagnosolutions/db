@@ -7,7 +7,7 @@ import (
 	"unsafe"
 )
 
-const M = 32 // (ORDER) 56
+const M = 8 // (ORDER) 56
 
 var zero []byte = nil
 
@@ -17,6 +17,10 @@ func asNode(p unsafe.Pointer) *node {
 
 func asRecord(p unsafe.Pointer) *record {
 	return (*record)(unsafe.Pointer(p))
+}
+
+func NewBTree() *btree {
+	return &btree{}
 }
 
 // node represents a btree's node
@@ -134,7 +138,7 @@ func (t *btree) Set(key []byte, val []byte) {
 func startNewbtree(key []byte, ptr *record) *node {
 	root := &node{leaf: struct{}{}}
 	root.keys[0] = key
-	root.ptrs[0] = unsafe.Pointer(&ptr)
+	root.ptrs[0] = unsafe.Pointer(ptr)
 	root.ptrs[M-1] = nil
 	root.rent = nil
 	root.numk++
@@ -145,8 +149,8 @@ func startNewbtree(key []byte, ptr *record) *node {
 func insertIntoNewRoot(left *node, key []byte, right *node) *node {
 	root := &node{}
 	root.keys[0] = key
-	root.ptrs[0] = unsafe.Pointer(&left)
-	root.ptrs[1] = unsafe.Pointer(&right)
+	root.ptrs[0] = unsafe.Pointer(left)
+	root.ptrs[1] = unsafe.Pointer(right)
 	root.numk++
 	root.rent = nil
 	left.rent = root
@@ -185,7 +189,7 @@ func getLeftIndex(rent, left *node) int {
 func insertIntoNode(root, n *node, leftIndex int, key []byte, right *node) *node {
 	copy(n.ptrs[leftIndex+2:], n.ptrs[leftIndex+1:])
 	copy(n.keys[leftIndex+1:], n.keys[leftIndex:])
-	n.ptrs[leftIndex+1] = unsafe.Pointer(&right)
+	n.ptrs[leftIndex+1] = unsafe.Pointer(right)
 	n.keys[leftIndex] = key
 	n.numk++
 	return root
@@ -212,7 +216,7 @@ func insertIntoNodeAfterSplitting(root, oldNode *node, leftIndex int, key []byte
 		tmpKeys[j] = oldNode.keys[i]
 	}
 
-	tmpPtrs[leftIndex+1] = unsafe.Pointer(&right)
+	tmpPtrs[leftIndex+1] = unsafe.Pointer(right)
 	tmpKeys[leftIndex] = key
 
 	split := cut(M)
@@ -269,7 +273,7 @@ func insertIntoLeaf(leaf *node, key []byte, ptr *record) {
 		leaf.ptrs[i] = leaf.ptrs[i-1]
 	}
 	leaf.keys[insertionPoint] = key
-	leaf.ptrs[insertionPoint] = unsafe.Pointer(&ptr)
+	leaf.ptrs[insertionPoint] = unsafe.Pointer(ptr)
 	leaf.numk++
 }
 
@@ -294,7 +298,7 @@ func insertIntoLeafAfterSplitting(root, leaf *node, key []byte, ptr *record) *no
 		tmpPtrs[j] = leaf.ptrs[i]
 	}
 	tmpKeys[insertionIndex] = key
-	tmpPtrs[insertionIndex] = unsafe.Pointer(&ptr)
+	tmpPtrs[insertionIndex] = unsafe.Pointer(ptr)
 
 	leaf.numk = 0
 	// index where to split leaf
@@ -320,7 +324,7 @@ func insertIntoLeafAfterSplitting(root, leaf *node, key []byte, ptr *record) *no
 		tmpKeys[i] = zero
 	}
 	newLeaf.ptrs[M-1] = leaf.ptrs[M-1]
-	leaf.ptrs[M-1] = unsafe.Pointer(&newLeaf)
+	leaf.ptrs[M-1] = unsafe.Pointer(newLeaf)
 	for i = leaf.numk; i < M-1; i++ {
 		leaf.ptrs[i] = nil
 	}
@@ -408,6 +412,7 @@ func search(n *node, key []byte) int {
 
 // breadth-first-search algorithm, kind of
 func (t *btree) BFS() {
+	fmt.Println("BFS -- START")
 	if t.root == nil {
 		return
 	}
@@ -419,18 +424,24 @@ func (t *btree) BFS() {
 	fmt.Printf(`[`)
 	for h >= 0 {
 		for i := 0; i < M; i++ {
-			if i == M-1 && c.ptrs[M-1] != nil {
-				fmt.Printf(` -> `)
-				c = asNode(c.ptrs[M-1])
-				i = 0
-				continue
+			if i == M-1 {
+				if c = asNode(c.ptrs[M-1]); c != nil {
+					fmt.Printf(` -> `)
+					i = 0
+					fmt.Println("BFS(1) CONTINUING...")
+					continue
+				}
 			}
+			fmt.Println("BFS(2) ITERATION...")
 			fmt.Printf(`[%s]`, c.keys[i])
 		}
+		fmt.Println("BFS(3) OUTSIDE INNER FOR LOOP, DECREMENTING 'h'...")
 		fmt.Println()
 		h--
 	}
-	fmt.Printf(`]\n`)
+	fmt.Println("BFS(5) OUTSIDE OF OUTER FOR LOOP...")
+	fmt.Printf("]\n")
+	fmt.Println("BFS -- DONE")
 }
 
 // finds the first leaf in the btree (lexicographically)
