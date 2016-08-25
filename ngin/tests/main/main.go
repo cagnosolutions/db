@@ -3,6 +3,6 @@ package main
 import "fmt"
 
 func main() {
-	fmt.Println("This is a test.")
 	t := ngin.NewBTree()
+	fmt.Println(t)
 }

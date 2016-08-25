@@ -7,7 +7,7 @@ import (
 	"unsafe"
 )
 
-/* ##### PRINTER ##### */
+/* ##### START-PRINTER ##### */
 
 var queue *node = nil
 
@@ -51,6 +51,7 @@ func dequeue() *node {
 
 // prints the bottom row of keys of the tree
 func print_leaves(root *node) {
+	fmt.Println("Printing Leaves...")
 	var i int
 	var c *node = root
 	if root == nil {
@@ -58,24 +59,25 @@ func print_leaves(root *node) {
 		return
 	}
 	for !c.isLeaf() {
-		c = (*node)(unsafe.Pointer(c.ptrs[0])
+		c = (*node)(unsafe.Pointer(c.ptrs[0]))
 	}
 	for {
-		for i = 0; i < c.num_keys; i++ {
-			fmt.Printf("%s ", c.keys[i])
+		for i = 0; i < c.numk; i++ {
+			fmt.Printf("%s, ", c.keys[i])
 		}
-		if c.ptrs[ORDER-1] != nil {
+		if c.ptrs[M-1] != nil {
 			fmt.Printf(" | ")
-			c = (*node)(unsafe.Pointer(c.ptrs[ORDER-1]))
+			c = (*node)(unsafe.Pointer(c.ptrs[M-1]))
 		} else {
 			break
 		}
 	}
-	fmt.Printf("\n")
+	fmt.Printf("\n\n")
 }
 
 // print tree out
 func print_tree(root *node) {
+	fmt.Println("Printing Tree...")
 	var i, rank, new_rank int
 	if root == nil {
 		fmt.Printf("Empty tree.\n")
@@ -85,24 +87,24 @@ func print_tree(root *node) {
 	enqueue(root)
 	for queue != nil {
 		n := dequeue()
-		if n.rent != nil && n == n.rent.ptrs[0] {
+		if n.rent != nil && n == (*node)(unsafe.Pointer(n.rent.ptrs[0])) {
 			new_rank = path_to_root(root, n)
 			if new_rank != rank {
 				rank = new_rank
 				fmt.Printf("\n")
 			}
 		}
-		for i = 0; i < n.num_keys; i++ {
-			fmt.Printf("%s ", n.keys[i])
+		for i = 0; i < n.numk; i++ {
+			fmt.Printf("%s, ", n.keys[i])
 		}
 		if !n.isLeaf() {
-			for i = 0; i <= n.num_keys; i++ {
-				enqueue((*node)(unsafe.Pointer(p)))
+			for i = 0; i <= n.numk; i++ {
+				enqueue((*node)(unsafe.Pointer(n)))
 			}
 		}
 		fmt.Printf("| ")
 	}
-	fmt.Printf("\n")
+	fmt.Printf("\n\n")
 }
 
 func (t *btree) Print() {
@@ -111,7 +113,7 @@ func (t *btree) Print() {
 	print_leaves(t.root)
 }
 
-/* ##### PRINTER ##### */
+/* ##### END-PRINTER ##### */
 
 const M = 8 // (ORDER) 56
 
@@ -527,19 +529,18 @@ func (t *btree) BFS() {
 		c = asNode(c.ptrs[0])
 		h++
 	}
-	fmt.Printf(`[`)
+	fmt.Printf("h: %d\n[", h)
 	for h >= 0 {
-		for i := 0; i < M; i++ {
-			if i == M-1 {
-				if c = asNode(c.ptrs[M-1]); c != nil {
-					fmt.Printf(` -> `)
-					i = 0
-					fmt.Println("BFS(1) CONTINUING...")
-					continue
-				}
+		for i := 0; i < M-1; i++ {
+			if i == c.numk && c.ptrs[M-1] != nil {
+				c = (*node)(unsafe.Pointer(c))
+				fmt.Printf(` -> `)
+				i = 0
+				fmt.Println("\nBFS(1) CONTINUING...")
+				continue
 			}
-			fmt.Println("BFS(2) ITERATION...")
-			fmt.Printf(`[%s]`, c.keys[i])
+			fmt.Println("\nBFS(2) ITERATION...")
+			fmt.Printf(`{%s}`, c.keys[i])
 		}
 		fmt.Println("BFS(3) OUTSIDE INNER FOR LOOP, DECREMENTING 'h'...")
 		fmt.Println()
@@ -885,8 +886,6 @@ func cut(length int) int {
 /*
  * Printing methods
  */
-
-var queue *node = nil
 
 func enQueue(n *node) {
 	var c *node

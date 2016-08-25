@@ -21,8 +21,15 @@ func main() {
 		t.Set(n, n)
 	}
 
+	for i := 0; i < COUNT; i++ {
+		n := gen("key-val-%.3d", i)
+		x := t.Get(n)
+		fmt.Printf("got val: %s\n", x)
+	}
+
 	fmt.Printf("Tree contains %d entries...\n", t.Count())
 
+	t.Print()
 	t.BFS() // print out tree...
 
 	t.Close()
