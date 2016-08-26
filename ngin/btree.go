@@ -62,7 +62,11 @@ func print_leaves(root *node) {
 		c = (*node)(unsafe.Pointer(c.ptrs[0]))
 	}
 	for {
-		for i = 0; i < c.numk; i++ {
+		for i = 0; i < M-1; i++ {
+			if c.keys[i] == nil {
+				fmt.Printf("___, ")
+				continue
+			}
 			fmt.Printf("%s, ", c.keys[i])
 		}
 		if c.ptrs[M-1] != nil {
@@ -108,8 +112,8 @@ func print_tree(root *node) {
 }
 
 func (t *btree) Print() {
-	print_tree(t.root)
-	fmt.Println()
+	//print_tree(t.root)
+	//fmt.Println()
 	print_leaves(t.root)
 }
 
@@ -137,12 +141,23 @@ type node struct {
 	keys [M - 1][]byte
 	ptrs [M]unsafe.Pointer // might just have to do away with this, and do an int instead?! why not before??!
 	rent *node
-	leaf struct{}
+	leaf bool
 	next *node
 }
 
+func (n *node) Size() int {
+	size := int(unsafe.Sizeof(*n))
+	var bite = new(byte)
+
+	for i := range (*n).keys {
+		size += cap((*n).keys[i]) * int(unsafe.Sizeof(bite))
+	}
+
+	return size
+}
+
 func (n *node) isLeaf() bool {
-	return n.leaf == struct{}{}
+	return n.leaf
 }
 
 func (n *node) hasKey(k []byte) int {
@@ -244,7 +259,7 @@ func (t *btree) Set(key []byte, val []byte) {
 
 // first insertion, start a new btree
 func startNewbtree(key []byte, ptr *record) *node {
-	root := &node{leaf: struct{}{}}
+	root := &node{leaf: true}
 	root.keys[0] = key
 	root.ptrs[0] = unsafe.Pointer(ptr)
 	root.ptrs[M-1] = nil
@@ -418,7 +433,7 @@ func insertIntoLeafAfterSplitting(root, leaf *node, key []byte, ptr *record) *no
 		leaf.numk++
 	}
 	// create new leaf
-	newLeaf := &node{leaf: struct{}{}}
+	newLeaf := &node{leaf: true}
 
 	// writing to new leaf from split point to end of giginal leaf pre split
 	for i, j = split, 0; i < M; i, j = i+1, j+1 {
@@ -433,12 +448,17 @@ func insertIntoLeafAfterSplitting(root, leaf *node, key []byte, ptr *record) *no
 	}
 	newLeaf.ptrs[M-1] = leaf.ptrs[M-1]
 	leaf.ptrs[M-1] = unsafe.Pointer(newLeaf)
+
+	//
 	for i = leaf.numk; i < M-1; i++ {
+		leaf.keys[i] = nil
 		leaf.ptrs[i] = nil
 	}
 	for i = newLeaf.numk; i < M-1; i++ {
+		newLeaf.keys[i] = nil
 		newLeaf.ptrs[i] = nil
 	}
+
 	newLeaf.rent = leaf.rent
 	newKey := newLeaf.keys[0]
 	return insertIntorent(root, leaf, newKey, newLeaf)
