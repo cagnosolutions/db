@@ -147,10 +147,8 @@ type node struct {
 
 func (n *node) Size() int {
 	size := int(unsafe.Sizeof(*n))
-	var bite = new(byte)
-
 	for i := range (*n).keys {
-		size += cap((*n).keys[i]) * int(unsafe.Sizeof(bite))
+		size += cap((*n).keys[i]) * int(unsafe.Alignof((*n).keys[i]))
 	}
 
 	return size
