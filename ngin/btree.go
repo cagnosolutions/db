@@ -119,7 +119,7 @@ func (t *btree) Print() {
 
 /* ##### END-PRINTER ##### */
 
-const M = 8 // (ORDER) 56
+const M = 64 * 2 // (ORDER) 56
 
 var zero []byte = nil
 
@@ -133,6 +133,14 @@ func asRecord(p unsafe.Pointer) *record {
 
 func NewBTree() *btree {
 	return &btree{}
+}
+
+type Node struct {
+	Numk int
+	Keys [M - 1]string
+	Ptrs [M]unsafe.Pointer
+	Rent *Node
+	Leaf bool
 }
 
 // node represents a btree's node
