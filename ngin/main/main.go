@@ -45,7 +45,15 @@ func main() {
 	fmt.Println()
 
 	t.Print()
-	//t.BFS() // print out tree...
+
+	fmt.Println("Deleting entries\n")
+
+	for c, _ := range a {
+		n := gen("key-val-%.3d", c)
+		t.Del(n)
+		fmt.Printf("deleted key: %s\n\n", n)
+		t.Print()
+	}
 
 	t.Close()
 
